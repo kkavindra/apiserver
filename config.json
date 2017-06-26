@@ -1,0 +1,11 @@
+{
+   "db" : {
+      "dbHost" : "ITEM-AX30984",
+      "dbPort" : "3306",
+      "db" : "apiserver",
+	  "dbSchema" : "apiserver",
+      "dbUser" : "test",
+      "dbPassword": "test",
+	  "userTables": ["user","test1"]
+   }
+}
