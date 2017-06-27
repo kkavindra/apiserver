@@ -6,47 +6,14 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var multer = require('multer'); // v1.0.5
-var httpServerPort = 8081;
 var apiServerPort = 8082;
+endPointsDef = "<thead><tr><th>Method</th><th>Path</th><th>Object Sample</th></tr></thead>";
+
 
 
   
 var configFile = "config.json";
 var upload = multer(); // for parsing multipart/form-data
-
-// Create a server
-http.createServer( function (request, response) {  
-   // Parse the request containing file name
-   var pathname = url.parse(request.url).pathname;
-   
-   // Print the name of the file for which request is made.
-   console.log("Request for " + pathname + " received.");
-   
-   // Read the requested file content from file system
-   console.log(pathname.substr(1));
-   fs.readFile(pathname.substr(1), function (err, data) {
-      if (err) {
-         console.log(err);
-         // HTTP Status: 404 : NOT FOUND
-         // Content Type: text/plain
-         response.writeHead(404, {'Content-Type': 'text/html'});
-				
-      }else {	
-         //Page found	  
-         // HTTP Status: 200 : OK
-         // Content Type: text/plain
-         response.writeHead(200, {'Content-Type': 'text/html'});	
-         
-         // Write the content of the file to response body
-         response.write(data.toString());		
-      }
-      // Send the response body 
-      response.end();
-   });   
-}).listen(httpServerPort);
-// Console will print the message
-
-
 
 //rest API listener
 
@@ -67,7 +34,6 @@ var server = app.listen(apiServerPort, function () {
 
   var host = server.address().address;
   console.log("API server listening at http://%s:%s", host,apiServerPort);
-  console.log("API server listening at http://%s:%s", host,httpServerPort)
   readConfig();
   
 
@@ -134,7 +100,7 @@ function execUseDB(con,sqlQry,conDbUserTables){
 	
 	for(tbl in conDbUserTables){
 		wirteToConsoleDebug("conDbUserTables Qry :" + "SHOW COLUMNS FROM " + conDbUserTables[tbl]);
-		execDB(con,"SHOW COLUMNS FROM " + conDbUserTables[tbl]);
+		execDB(con,"SHOW COLUMNS FROM " + conDbUserTables[tbl],conDbUserTables[tbl]);
 		}
 	}
 	
@@ -143,14 +109,14 @@ function execUseDB(con,sqlQry,conDbUserTables){
   return;
 }
 
-function execDB(con,sqlQry){
+function execDB(con,sqlQry,currTable){
 	//get the table structure definition
 	con.query(sqlQry, function (err, tableResult) {
     if (err){
 		throw err;
 	} else {
 	wirteToConsoleDebug("result : " + JSON.stringify(tableResult));
-    defineJsonModel(tableResult,con);
+    defineJsonModel(tableResult,con,currTable);
 	}
 	
   });
@@ -158,7 +124,7 @@ function execDB(con,sqlQry){
   return;
 }
 
-function defineJsonModel(tableResult,con){
+function defineJsonModel(tableResult,con,currTable){
 	//define the sample JSON body based on table structure
 	var jsonModel = "{";
 	
@@ -173,15 +139,29 @@ function defineJsonModel(tableResult,con){
 	}
 	jsonModel = jsonModel + "}";
 	wirteToConsoleDebug("JSON message sample : " + jsonModel);	
-	defineEndPoints(jsonModel,"user",tableResult,con);
+	defineEndPoints(jsonModel,currTable,tableResult,con);
 	return;
 }
 
 function defineEndPoints(jsonModel,dbTable,tableResult,con){
+	
+
+	endPointsDef =  endPointsDef +  "<tr class=\"info\">"+
+					"<th>GET</th>"+
+					"<th>'/'"+ dbTable + "</th>" + 
+					"<th>"+ jsonModel + "</th>" + 
+					"</tr>";
+	endPointsDef =  endPointsDef +  "<tr class=\"danger\">"+
+					"<th>POST</th>"+
+					"<th>'/'"+ dbTable + "</th>" + 
+					"<th>"+ jsonModel + "</th>" + 
+					"</tr>";
 	//setting up listner path for the requests
 	wirteToConsoleDebug("setting up listener paths");
 	//GET request to retreive the records from the table
 	app.get('/' + dbTable , function (req, res) {
+	
+	
 	wirteToConsoleDebug("GET request for " + dbTable);
 	   var qry = "SELECT * from " + dbTable;
 	   wirteToConsoleDebug("query to exec : " + qry);
@@ -315,9 +295,19 @@ function defineEndPoints(jsonModel,dbTable,tableResult,con){
 	//End of for loop
 	
 	
+
    
    res.status(201).send(finResult);
    });
+   
+   	app.get('/', function (req, res) {
+		// Synchronous read
+		var data = fs.readFileSync('index.html');
+		endPointsDef = "<table class=\"table\">" + endPointsDef + "</table>";
+		console.log("End points: " + endPointsDef);
+		res.send(data.toString().replace("$endPoints",endPointsDef));
+
+	})
 }
 
 
